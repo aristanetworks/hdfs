@@ -1,7 +1,7 @@
 HDFS for Go
 ===========
 
-[![GoDoc](https://godoc.org/github.com/aristanetworks/hdfs/web?status.svg)](https://godoc.org/github.com/colinmarc/hdfs)
+[![GoDoc](https://godoc.org/github.com/aristanetworks/hdfs/web?status.svg)](https://godoc.org/github.com/aristanetworks/hdfs)
 
 This is a native golang client for hdfs. It connects directly to the namenode using
 the protocol buffers API.
