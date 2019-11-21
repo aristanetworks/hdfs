@@ -1,8 +1,8 @@
 package hdfs
 
 import (
-	hdfs "github.com/colinmarc/hdfs/protocol/hadoop_hdfs"
-	"github.com/colinmarc/hdfs/rpc"
+	hdfs "github.com/aristanetworks/hdfs/protocol/hadoop_hdfs"
+	"github.com/aristanetworks/hdfs/rpc"
 )
 
 // AllowSnapshots marks a directory as available for snapshots.
