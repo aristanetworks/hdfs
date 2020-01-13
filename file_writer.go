@@ -1,8 +1,10 @@
 package hdfs
 
 import (
+	"context"
 	"io"
 	"os"
+	"time"
 
 	hdfs "github.com/aristanetworks/hdfs/protocol/hadoop_hdfs"
 	"github.com/aristanetworks/hdfs/rpc"
@@ -208,19 +210,34 @@ func (f *FileWriter) Close() error {
 		lastBlock = f.block.GetB()
 	}
 
-	completeReq := &hdfs.CompleteRequestProto{
-		Src:        proto.String(f.name),
-		ClientName: proto.String(f.client.namenode.ClientName()),
-		Last:       lastBlock,
-	}
-	completeResp := &hdfs.CompleteResponseProto{}
+	// Retry on Complete request returning false
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	backOff := 50 * time.Millisecond
+	for {
+		completeReq := &hdfs.CompleteRequestProto{
+			Src:        proto.String(f.name),
+			ClientName: proto.String(f.client.namenode.ClientName()),
+			Last:       lastBlock,
+		}
+		completeResp := &hdfs.CompleteResponseProto{}
 
-	err := f.client.namenode.Execute("complete", completeReq, completeResp)
-	if err != nil {
-		return &os.PathError{"create", f.name, err}
+		err := f.client.namenode.Execute("complete", completeReq, completeResp)
+		if err != nil {
+			return &os.PathError{"create", f.name, err}
+		}
+		// Return no error if fileWriter is successfully closed.
+		if closed := completeResp.GetResult(); closed {
+			return nil
+		}
+		// If fileWriter is not yet closed, wait for backOff and retry or timeout.
+		select {
+		case <-time.After(backOff):
+			backOff *= 2
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
-
-	return nil
 }
 
 func (f *FileWriter) startNewBlock() error {
