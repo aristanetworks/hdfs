@@ -211,7 +211,7 @@ func (f *FileWriter) Close() error {
 	}
 
 	// Retry on Complete request returning false
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	backOff := 50 * time.Millisecond
 	for {
@@ -233,7 +233,9 @@ func (f *FileWriter) Close() error {
 		// If fileWriter is not yet closed, wait for backOff and retry or timeout.
 		select {
 		case <-time.After(backOff):
-			backOff *= 2
+			if backOff < 2*time.Second {
+				backOff *= 2
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
