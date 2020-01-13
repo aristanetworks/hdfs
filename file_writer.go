@@ -211,7 +211,7 @@ func (f *FileWriter) Close() error {
 	}
 
 	// Retry on Complete request returning false
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	backOff := 50 * time.Millisecond
 	for {
@@ -227,7 +227,7 @@ func (f *FileWriter) Close() error {
 			return &os.PathError{"create", f.name, err}
 		}
 		// Return no error if fileWriter is successfully closed.
-		if closed := completeResp.GetResult(); closed {
+		if completeResp.GetResult() {
 			return nil
 		}
 		// If fileWriter is not yet closed, wait for backOff and retry or timeout.
