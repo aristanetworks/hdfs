@@ -1,7 +1,7 @@
 package hdfs
 
 import (
-	"context"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -211,8 +211,8 @@ func (f *FileWriter) Close() error {
 	}
 
 	// Retry on Complete request returning false
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+	timer := time.NewTimer(60 * time.Second)
+	defer timer.Stop()
 	backOff := 50 * time.Millisecond
 	for {
 		completeReq := &hdfs.CompleteRequestProto{
@@ -236,8 +236,8 @@ func (f *FileWriter) Close() error {
 			if backOff < 2*time.Second {
 				backOff *= 2
 			}
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-timer.C:
+			return fmt.Errorf("fileWriter Close timed-out for file: %v", f.name)
 		}
 	}
 }
