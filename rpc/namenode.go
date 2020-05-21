@@ -145,25 +145,32 @@ func (c *NamenodeConnection) resolveConnection() error {
 	}
 
 	var err error
+	stackErrors := fmt.Errorf("resolveConnection failed:\n")
 
 	if c.host != nil {
 		err = c.host.lastError
 	}
 
-	for _, host := range c.hostList {
+	for i, host := range c.hostList {
 		if host.lastErrorAt.After(time.Now().Add(-backoffDuration)) {
+			stackErrors = fmt.Errorf("%sNN %v: still backing off host %v after error" +
+				" \"%s\" at time %s.\n", stackErrors, i, host.address, host.lastError, host.lastErrorAt)
 			continue
 		}
 
 		c.host = host
 		c.conn, err = net.DialTimeout("tcp", host.address, connectTimeout)
 		if err != nil {
+			stackErrors = fmt.Errorf("%sNN %v: failed to dial host %v with error \"%s\".\n",
+				stackErrors, i, host.address, err)
 			c.markFailure(err)
 			continue
 		}
 
 		err = c.writeNamenodeHandshake()
 		if err != nil {
+			stackErrors = fmt.Errorf("%sNN %v: failed namenode handshake to host %v with" +
+				" error \"%s\".\n", stackErrors, i, host.address, err)
 			c.markFailure(err)
 			continue
 		}
@@ -172,7 +179,7 @@ func (c *NamenodeConnection) resolveConnection() error {
 	}
 
 	if c.conn == nil {
-		return fmt.Errorf("no available namenodes: %s", err)
+		return fmt.Errorf("no available namenodes: %s", stackErrors)
 	}
 
 	return nil
