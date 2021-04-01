@@ -366,8 +366,10 @@ type GetReconfigurationStatusConfigChangeProto struct {
 func (m *GetReconfigurationStatusConfigChangeProto) Reset() {
 	*m = GetReconfigurationStatusConfigChangeProto{}
 }
-func (m *GetReconfigurationStatusConfigChangeProto) String() string { return proto.CompactTextString(m) }
-func (*GetReconfigurationStatusConfigChangeProto) ProtoMessage()    {}
+func (m *GetReconfigurationStatusConfigChangeProto) String() string {
+	return proto.CompactTextString(m)
+}
+func (*GetReconfigurationStatusConfigChangeProto) ProtoMessage() {}
 func (*GetReconfigurationStatusConfigChangeProto) Descriptor() ([]byte, []int) {
 	return fileDescriptor0, []int{3}
 }
@@ -457,8 +459,10 @@ type ListReconfigurablePropertiesResponseProto struct {
 func (m *ListReconfigurablePropertiesResponseProto) Reset() {
 	*m = ListReconfigurablePropertiesResponseProto{}
 }
-func (m *ListReconfigurablePropertiesResponseProto) String() string { return proto.CompactTextString(m) }
-func (*ListReconfigurablePropertiesResponseProto) ProtoMessage()    {}
+func (m *ListReconfigurablePropertiesResponseProto) String() string {
+	return proto.CompactTextString(m)
+}
+func (*ListReconfigurablePropertiesResponseProto) ProtoMessage() {}
 func (*ListReconfigurablePropertiesResponseProto) Descriptor() ([]byte, []int) {
 	return fileDescriptor0, []int{6}
 }

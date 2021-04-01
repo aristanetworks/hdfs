@@ -77,10 +77,12 @@ type GetDelegationTokenResponseProto struct {
 	XXX_unrecognized []byte      `json:"-"`
 }
 
-func (m *GetDelegationTokenResponseProto) Reset()                    { *m = GetDelegationTokenResponseProto{} }
-func (m *GetDelegationTokenResponseProto) String() string            { return proto.CompactTextString(m) }
-func (*GetDelegationTokenResponseProto) ProtoMessage()               {}
-func (*GetDelegationTokenResponseProto) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{2} }
+func (m *GetDelegationTokenResponseProto) Reset()         { *m = GetDelegationTokenResponseProto{} }
+func (m *GetDelegationTokenResponseProto) String() string { return proto.CompactTextString(m) }
+func (*GetDelegationTokenResponseProto) ProtoMessage()    {}
+func (*GetDelegationTokenResponseProto) Descriptor() ([]byte, []int) {
+	return fileDescriptor7, []int{2}
+}
 
 func (m *GetDelegationTokenResponseProto) GetToken() *TokenProto {
 	if m != nil {

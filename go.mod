@@ -1,4 +1,4 @@
-module github.com/colinmarc/hdfs/v2
+module github.com/aristanetworks/hdfs/v2
 
 require (
 	github.com/golang/protobuf v1.1.0

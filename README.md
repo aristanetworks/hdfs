@@ -1,7 +1,7 @@
 HDFS for Go
 ===========
 
-[![GoDoc](https://godoc.org/github.com/colinmarc/hdfs/web?status.svg)](https://godoc.org/github.com/colinmarc/hdfs) [![build](https://travis-ci.org/colinmarc/hdfs.svg?branch=master)](https://travis-ci.org/colinmarc/hdfs)
+[![GoDoc](https://godoc.org/github.com/aristanetworks/hdfs/web?status.svg)](https://godoc.org/github.com/aristanetworks/hdfs) [![build](https://travis-ci.org/colinmarc/hdfs.svg?branch=master)](https://travis-ci.org/colinmarc/hdfs)
 
 This is a native golang client for hdfs. It connects directly to the namenode using
 the protocol buffers API.
@@ -74,7 +74,7 @@ Best of all, it comes with bash tab completion for paths!
 Installing the commandline client
 ---------------------------------
 
-Grab a tarball from the [releases page](https://github.com/colinmarc/hdfs/releases)
+Grab a tarball from the [releases page](https://github.com/aristanetworks/hdfs/releases)
 and unzip it wherever you like.
 
 To configure the client, make sure one or both of these environment variables
@@ -119,6 +119,6 @@ Acknowledgements
 
 This library is heavily indebted to [snakebite][3].
 
-[1]: https://godoc.org/github.com/colinmarc/hdfs
+[1]: https://godoc.org/github.com/aristanetworks/hdfs
 [2]: https://golang.org/doc/install
 [3]: https://github.com/spotify/snakebite

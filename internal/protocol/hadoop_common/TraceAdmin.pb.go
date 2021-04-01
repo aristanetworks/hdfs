@@ -151,10 +151,12 @@ type RemoveSpanReceiverResponseProto struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *RemoveSpanReceiverResponseProto) Reset()                    { *m = RemoveSpanReceiverResponseProto{} }
-func (m *RemoveSpanReceiverResponseProto) String() string            { return proto.CompactTextString(m) }
-func (*RemoveSpanReceiverResponseProto) ProtoMessage()               {}
-func (*RemoveSpanReceiverResponseProto) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{7} }
+func (m *RemoveSpanReceiverResponseProto) Reset()         { *m = RemoveSpanReceiverResponseProto{} }
+func (m *RemoveSpanReceiverResponseProto) String() string { return proto.CompactTextString(m) }
+func (*RemoveSpanReceiverResponseProto) ProtoMessage()    {}
+func (*RemoveSpanReceiverResponseProto) Descriptor() ([]byte, []int) {
+	return fileDescriptor5, []int{7}
+}
 
 func init() {
 	proto.RegisterType((*ListSpanReceiversRequestProto)(nil), "hadoop.common.ListSpanReceiversRequestProto")

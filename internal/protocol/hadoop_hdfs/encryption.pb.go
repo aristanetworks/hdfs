@@ -55,10 +55,12 @@ type ListEncryptionZonesRequestProto struct {
 	XXX_unrecognized []byte `json:"-"`
 }
 
-func (m *ListEncryptionZonesRequestProto) Reset()                    { *m = ListEncryptionZonesRequestProto{} }
-func (m *ListEncryptionZonesRequestProto) String() string            { return proto.CompactTextString(m) }
-func (*ListEncryptionZonesRequestProto) ProtoMessage()               {}
-func (*ListEncryptionZonesRequestProto) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{2} }
+func (m *ListEncryptionZonesRequestProto) Reset()         { *m = ListEncryptionZonesRequestProto{} }
+func (m *ListEncryptionZonesRequestProto) String() string { return proto.CompactTextString(m) }
+func (*ListEncryptionZonesRequestProto) ProtoMessage()    {}
+func (*ListEncryptionZonesRequestProto) Descriptor() ([]byte, []int) {
+	return fileDescriptor2, []int{2}
+}
 
 func (m *ListEncryptionZonesRequestProto) GetId() int64 {
 	if m != nil && m.Id != nil {

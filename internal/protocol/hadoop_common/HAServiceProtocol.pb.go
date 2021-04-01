@@ -132,10 +132,12 @@ type TransitionToActiveRequestProto struct {
 	XXX_unrecognized []byte                         `json:"-"`
 }
 
-func (m *TransitionToActiveRequestProto) Reset()                    { *m = TransitionToActiveRequestProto{} }
-func (m *TransitionToActiveRequestProto) String() string            { return proto.CompactTextString(m) }
-func (*TransitionToActiveRequestProto) ProtoMessage()               {}
-func (*TransitionToActiveRequestProto) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{3} }
+func (m *TransitionToActiveRequestProto) Reset()         { *m = TransitionToActiveRequestProto{} }
+func (m *TransitionToActiveRequestProto) String() string { return proto.CompactTextString(m) }
+func (*TransitionToActiveRequestProto) ProtoMessage()    {}
+func (*TransitionToActiveRequestProto) Descriptor() ([]byte, []int) {
+	return fileDescriptor11, []int{3}
+}
 
 func (m *TransitionToActiveRequestProto) GetReqInfo() *HAStateChangeRequestInfoProto {
 	if m != nil {

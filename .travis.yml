@@ -1,6 +1,6 @@
 sudo: required
 language: go
-go_import_path: github.com/colinmarc/hdfs
+go_import_path: github.com/aristanetworks/hdfs
 go: 1.x
 env:
 - PLATFORM=hdp2
