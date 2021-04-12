@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/aristanetworks/hdfs"
+	"github.com/aristanetworks/hdfs/v2"
 )
 
 const tailSearchSize int64 = 16384

@@ -2,12 +2,14 @@ package hdfs
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -27,6 +29,14 @@ const (
 
 	testChecksum = "27c076e4987344253650d3335a5d08ce"
 )
+
+type randomReadConn struct {
+	net.Conn
+}
+
+func (r *randomReadConn) Read(b []byte) (int, error) {
+	return r.Conn.Read(b[0:rand.Intn(len(b)+1)])
+}
 
 func TestFileRead(t *testing.T) {
 	client := getClient(t)
@@ -90,6 +100,38 @@ func TestFileBigReadWeirdSizes(t *testing.T) {
 	assert.EqualValues(t, copied, 1257276)
 }
 
+func TestFileBigReadWeirdSizesMisalignment(t *testing.T) {
+	client := getClient(t)
+	dial := client.options.DatanodeDialFunc
+	if dial == nil {
+		dial = (&net.Dialer{}).DialContext
+	}
+
+	client.options.DatanodeDialFunc = func(ctx context.Context, network, address string) (net.Conn, error) {
+		conn, err := dial(ctx, network, address)
+		if err != nil {
+			return nil, err
+		}
+
+		return &randomReadConn{conn}, nil
+	}
+
+	file, err := client.Open("/_test/mobydick.txt")
+	require.NoError(t, err)
+
+	hash := crc32.NewIEEE()
+	copied := 0
+	var n int64
+	for err == nil {
+		n, err = io.CopyN(hash, file, int64(rand.Intn(1000)))
+		copied += int(n)
+	}
+
+	assert.EqualValues(t, io.EOF, err)
+	assert.EqualValues(t, 0x199d1ae6, hash.Sum32())
+	assert.EqualValues(t, copied, 1257276)
+}
+
 func TestFileBigReadN(t *testing.T) {
 	client := getClient(t)
 
@@ -122,7 +164,7 @@ func TestFileReadAt(t *testing.T) {
 	off := 0
 	for off < len(buf) {
 		n, err := file.ReadAt(buf[off:], int64(testStrOff+off))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, n > 0)
 		off += n
 	}
@@ -133,7 +175,7 @@ func TestFileReadAt(t *testing.T) {
 	off = 0
 	for off < len(buf) {
 		n, err := file.ReadAt(buf[off:], int64(testStr2Off+off))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.True(t, n > 0)
 		off += n
 	}
@@ -150,7 +192,24 @@ func TestFileReadAtEOF(t *testing.T) {
 	buf := make([]byte, 10)
 	_, err = file.ReadAt(buf, 1)
 
-	assert.Equal(t, err, io.EOF)
+	assert.Equal(t, append([]byte{'a', 'r', '\n'}, make([]byte, 7)...), buf)
+	assert.Equal(t, io.EOF, err)
+}
+
+func TestFileReadOversizedBuffer(t *testing.T) {
+	client := getClient(t)
+
+	file, err := client.Open("/_test/foo.txt")
+	require.NoError(t, err)
+
+	buf := make([]byte, 1025)
+	n, err := file.Read(buf)
+
+	assert.Equal(t, 4, n)
+	assert.Equal(t, append([]byte{'b', 'a', 'r', '\n'}, make([]byte, 1025-4)...), buf)
+	if err != io.EOF {
+		assert.NoError(t, err)
+	}
 }
 
 func TestFileSeek(t *testing.T) {
@@ -243,10 +302,10 @@ func TestFileReadDirnames(t *testing.T) {
 func TestFileReadDirMany(t *testing.T) {
 	client := getClient(t)
 
-	total := maxReadDir*5 + maxReadDir/2 + 35
+	maxReadDir := 1000 // HDFS returns this many entries.
+	total := maxReadDir*2 + maxReadDir/2 + 35
 	firstBatch := maxReadDir + 71
 
-	baleet(t, "/_test/fulldir5")
 	mkdirp(t, "/_test/fulldir5")
 	for i := 0; i < total; i++ {
 		touch(t, fmt.Sprintf("/_test/fulldir5/%04d", i))
@@ -275,14 +334,14 @@ func TestFileReadDirMany(t *testing.T) {
 }
 
 func TestOpenFileWithoutPermission(t *testing.T) {
-	otherClient := getClientForUser(t, "other")
+	client2 := getClientForUser(t, "gohdfs2")
 
-	mkdirp(t, "/_test/accessdenied")
-	touch(t, "/_test/accessdenied/foo")
+	mkdirpMask(t, "/_test/accessdenied", 0700)
+	touchMask(t, "/_test/accessdenied/foo", 0700)
 
-	file, err := otherClient.Open("/_test/accessdenied/foo")
-	assert.Nil(t, file)
+	file, err := client2.Open("/_test/accessdenied/foo")
 	assertPathError(t, err, "open", "/_test/accessdenied/foo", os.ErrPermission)
+	assert.Nil(t, file)
 }
 
 func TestFileChecksum(t *testing.T) {
@@ -295,4 +354,56 @@ func TestFileChecksum(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.EqualValues(t, testChecksum, hex.EncodeToString(checksum))
+}
+
+func TestFileReadDeadline(t *testing.T) {
+	client := getClient(t)
+
+	file, err := client.Open("/_test/foo.txt")
+	require.NoError(t, err)
+
+	file.SetDeadline(time.Now().Add(200 * time.Millisecond))
+	_, err = file.Read([]byte{0, 0})
+	assert.NoError(t, err)
+
+	time.Sleep(200 * time.Millisecond)
+	_, err = file.Read([]byte{0, 0})
+	assert.NotNil(t, err)
+}
+
+func TestFileReadDeadlineBefore(t *testing.T) {
+	client := getClient(t)
+
+	file, err := client.Open("/_test/foo.txt")
+	require.NoError(t, err)
+
+	file.SetDeadline(time.Now())
+	_, err = file.Read([]byte{0, 0})
+	assert.NotNil(t, err)
+}
+
+func TestFileChecksumDeadline(t *testing.T) {
+	client := getClient(t)
+
+	file, err := client.Open("/_test/foo.txt")
+	require.NoError(t, err)
+
+	file.SetDeadline(time.Now().Add(100 * time.Millisecond))
+	_, err = file.Checksum()
+	assert.NoError(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+	_, err = file.Checksum()
+	assert.NotNil(t, err)
+}
+
+func TestFileChecksumDeadlineBefore(t *testing.T) {
+	client := getClient(t)
+
+	file, err := client.Open("/_test/foo.txt")
+	require.NoError(t, err)
+
+	file.SetDeadline(time.Now())
+	_, err = file.Checksum()
+	assert.NotNil(t, err)
 }

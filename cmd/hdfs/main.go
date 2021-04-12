@@ -3,9 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
+	"os/user"
+	"time"
 
-	"github.com/aristanetworks/hdfs"
+	"github.com/aristanetworks/hdfs/v2"
+	"github.com/aristanetworks/hdfs/v2/hadoopconf"
 	"github.com/pborman/getopt"
 )
 
@@ -21,7 +25,7 @@ Valid commands:
   rm [-rf] FILE...
   mv [-nT] SOURCE... DEST
   mkdir [-p] FILE...
-  touch [-amc] FILE...
+  touch [-c] FILE...
   chmod [-R] OCTAL-MODE FILE...
   chown [-R] OWNER[:GROUP] FILE...
   cat SOURCE...
@@ -74,8 +78,8 @@ Valid commands:
 	dfOpts = getopt.New()
 	dfh    = dfOpts.Bool('h')
 
-	cachedClient *hdfs.Client
-	status       = 0
+	cachedClients map[string]*hdfs.Client = make(map[string]*hdfs.Client)
+	status                                = 0
 )
 
 func init() {
@@ -170,23 +174,60 @@ func fatalWithUsage(msg ...interface{}) {
 }
 
 func getClient(namenode string) (*hdfs.Client, error) {
-	if cachedClient != nil {
-		return cachedClient, nil
+	if cachedClients[namenode] != nil {
+		return cachedClients[namenode], nil
 	}
 
 	if namenode == "" {
 		namenode = os.Getenv("HADOOP_NAMENODE")
 	}
 
-	if namenode == "" && os.Getenv("HADOOP_CONF_DIR") == "" {
+	conf, err := hadoopconf.LoadFromEnvironment()
+	if err != nil {
+		return nil, fmt.Errorf("Problem loading configuration: %s", err)
+	}
+
+	options := hdfs.ClientOptionsFromConf(conf)
+	if namenode != "" {
+		options.Addresses = []string{namenode}
+	}
+
+	if options.Addresses == nil {
 		return nil, errors.New("Couldn't find a namenode to connect to. You should specify hdfs://<namenode>:<port> in your paths. Alternatively, set HADOOP_NAMENODE or HADOOP_CONF_DIR in your environment.")
 	}
 
-	c, err := hdfs.New(namenode)
-	if err != nil {
-		return nil, err
+	if options.KerberosClient != nil {
+		options.KerberosClient, err = getKerberosClient()
+		if err != nil {
+			return nil, fmt.Errorf("Problem with kerberos authentication: %s", err)
+		}
+	} else {
+		options.User = os.Getenv("HADOOP_USER_NAME")
+		if options.User == "" {
+			u, err := user.Current()
+			if err != nil {
+				return nil, fmt.Errorf("Couldn't determine user: %s", err)
+			}
+
+			options.User = u.Username
+		}
 	}
 
-	cachedClient = c
-	return cachedClient, nil
+	// Set some basic defaults.
+	dialFunc := (&net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 5 * time.Second,
+		DualStack: true,
+	}).DialContext
+
+	options.NamenodeDialFunc = dialFunc
+	options.DatanodeDialFunc = dialFunc
+
+	c, err := hdfs.NewClient(options)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't connect to namenode: %s", err)
+	}
+
+	cachedClients[namenode] = c
+	return c, nil
 }

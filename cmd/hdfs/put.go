@@ -7,7 +7,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/aristanetworks/hdfs"
+	"github.com/aristanetworks/hdfs/v2"
 )
 
 func put(args []string) {

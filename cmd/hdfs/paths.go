@@ -8,21 +8,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aristanetworks/hdfs"
+	"github.com/aristanetworks/hdfs/v2"
 )
 
 var (
 	errMultipleNamenodeUrls = errors.New("Multiple namenode URLs specified")
-	rootPath                = userDir()
 )
 
-func userDir() string {
-	currentUser, err := hdfs.Username()
-	if err != nil || currentUser == "" {
-		return "/"
-	}
-
-	return path.Join("/user", currentUser)
+func userDir(client *hdfs.Client) string {
+	return path.Join("/user", client.User())
 }
 
 // normalizePaths parses the hosts out of HDFS URLs, and turns relative paths
@@ -46,12 +40,7 @@ func normalizePaths(paths []string) ([]string, string, error) {
 			namenode = url.Host
 		}
 
-		p := path.Clean(url.Path)
-		if !path.IsAbs(url.Path) {
-			p = path.Join(rootPath, p)
-		}
-
-		cleanPaths = append(cleanPaths, p)
+		cleanPaths = append(cleanPaths, path.Clean(url.Path))
 	}
 
 	return cleanPaths, namenode, nil
@@ -84,7 +73,7 @@ func hasGlob(fragment string) bool {
 }
 
 // expandGlobs recursively expands globs in a filepath. It assumes the paths
-// are already cleaned and normalize (ie, absolute).
+// are already cleaned and normalized (ie, absolute).
 func expandGlobs(client *hdfs.Client, globbedPath string) ([]string, error) {
 	parts := strings.Split(globbedPath, "/")[1:]
 	var res []string
@@ -119,24 +108,24 @@ func expandGlobs(client *hdfs.Client, globbedPath string) ([]string, error) {
 			continue
 		}
 
-		if !hasGlob(next) {
-			_, err := client.Stat(path.Join(base, fi.Name(), next))
-			if err != nil && !os.IsNotExist(err) {
-				return nil, err
-			} else if os.IsNotExist(err) {
-				continue
-			}
-		}
-
 		newPath := path.Join(base, fi.Name(), next, remainder)
 		if hasGlob(newPath) {
-			children, err := expandGlobs(client, newPath)
-			if err != nil {
+			if fi.IsDir() {
+				children, err := expandGlobs(client, newPath)
+				if err != nil {
+					return nil, err
+				}
+
+				res = append(res, children...)
+			}
+		} else {
+			_, err := client.Stat(newPath)
+			if os.IsNotExist(err) {
+				continue
+			} else if err != nil {
 				return nil, err
 			}
 
-			res = append(res, children...)
-		} else {
 			res = append(res, newPath)
 		}
 	}
@@ -146,12 +135,20 @@ func expandGlobs(client *hdfs.Client, globbedPath string) ([]string, error) {
 
 func expandPaths(client *hdfs.Client, paths []string) ([]string, error) {
 	var res []string
+	home := userDir(client)
 
 	for _, p := range paths {
+		if !path.IsAbs(p) {
+			p = path.Join(home, p)
+		}
+
 		if hasGlob(p) {
 			expanded, err := expandGlobs(client, p)
 			if err != nil {
 				return nil, err
+			} else if len(expanded) == 0 {
+				// Fake a PathError for consistency.
+				return nil, &os.PathError{"stat", p, os.ErrNotExist}
 			}
 
 			res = append(res, expanded...)

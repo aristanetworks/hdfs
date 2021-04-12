@@ -5,8 +5,7 @@ import (
 	"path"
 	"time"
 
-	hdfs "github.com/aristanetworks/hdfs/protocol/hadoop_hdfs"
-	"github.com/aristanetworks/hdfs/rpc"
+	hdfs "github.com/aristanetworks/hdfs/v2/internal/protocol/hadoop_hdfs"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -14,14 +13,16 @@ import (
 // directory in HDFS.
 type FileInfo struct {
 	name   string
-	status *hdfs.HdfsFileStatusProto
+	status *FileStatus
 }
+
+type FileStatus = hdfs.HdfsFileStatusProto
 
 // Stat returns an os.FileInfo describing the named file or directory.
 func (c *Client) Stat(name string) (os.FileInfo, error) {
 	fi, err := c.getFileInfo(name)
 	if err != nil {
-		err = &os.PathError{"stat", name, err}
+		err = &os.PathError{"stat", name, interpretException(err)}
 	}
 
 	return fi, err
@@ -33,10 +34,6 @@ func (c *Client) getFileInfo(name string) (os.FileInfo, error) {
 
 	err := c.namenode.Execute("getFileInfo", req, resp)
 	if err != nil {
-		if nnErr, ok := err.(*rpc.NamenodeError); ok {
-			err = interpretException(nnErr.Exception, err)
-		}
-
 		return nil, err
 	}
 
